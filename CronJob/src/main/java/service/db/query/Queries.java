@@ -1,10 +1,8 @@
 package service.db.query;
 
-import models.users.IQueryTable;
+import org.apache.log4j.Logger;
 import service.db.connection.DBConnection;
 
-import java.io.FileReader;
-import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -14,36 +12,45 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Properties;
-import java.util.logging.*;
+
 
 public class Queries {
     private DBConnection connection;
     private Statement statement;
     private static Logger logQ = Logger.getLogger(Queries.class.getName());
-    static {
-        try {
-            Properties properties = new Properties();
-            properties.load(new FileReader("src/main/resources/logInfo.properties"));
-            Handler handler = new FileHandler(properties.getProperty("queryLog"));
-            handler.setFormatter(new SimpleFormatter());
-            logQ.addHandler(handler);
-            logQ.setUseParentHandlers(false);
-        } catch (IOException e) {
-            logQ.log(Level.WARNING,"File logger not working");
-        }
-    }
     public Queries(DBConnection connection) throws SQLException {
         this.connection = connection;
         statement = connection.getConnection().createStatement();
         logQ.info(connection.getNameDB() + " database. Created a statement.");
     }
-    public void insert(IQueryTable query) throws SQLException, NoSuchMethodException,
+    public void push(String query) throws SQLException {
+        statement.executeUpdate(query);
+        logQ.info(connection.getNameDB() + " " + query);
+    }
+    public <T> List<T> pull(String query, Class myClass) throws SQLException,
+            IllegalAccessException, InvocationTargetException, InstantiationException {
+        ResultSet resultSet = statement.executeQuery(query);
+        List<T> list = new LinkedList();
+        Field[] fields = myClass.getDeclaredFields();
+        Constructor constructor = myClass.getDeclaredConstructors()[0];
+        Object[] objects = new Object[fields.length];
+        while(resultSet.next()) {
+            for (int i = 0; i < objects.length; i++) {
+                objects[i] = resultSet.getObject(fields[i].getName());
+            }
+            list.add((T)constructor.newInstance(objects));
+        }
+        logQ.info(connection.getNameDB() + " " + query);
+        return list;
+    }
+    /*
+    public void insert(Object query) throws SQLException, NoSuchMethodException,
             InvocationTargetException, IllegalAccessException {
         StringBuffer str = new StringBuffer("INSERT INTO " +
                 query.getClass().getDeclaredMethod("getTableName").invoke(query) + " SET ");
         stringMaker(str,query);
-        logQ.info(connection.getNameDB() + " " + str);
+        logQ.info(connection.getNameDB() + str);
+        System.out.println(str);
         statement.executeUpdate(String.valueOf(str));
     }
     public void deleteByID(Class myClass, int id) throws NoSuchMethodException,
@@ -55,19 +62,19 @@ public class Queries {
                 "DELETE FROM " + myClass.getDeclaredMethod("getTableName").invoke(null) +
                         " WHERE ID= " + id);
     }
-    public void updateByID(IQueryTable query, int id) throws SQLException, NoSuchFieldException,
-            IllegalAccessException, InvocationTargetException, InstantiationException, NoSuchMethodException {
+    public void updateByID(Object query, int id) throws SQLException, IllegalAccessException,
+            InvocationTargetException, NoSuchMethodException {
         StringBuffer str = new StringBuffer("UPDATE " +
                 query.getClass().getDeclaredMethod("getTableName").invoke(query) + " SET ");
         stringMaker(str,query);
         str.append(" WHERE ID = " + id);
-        logQ.info(connection.getNameDB() + " " + str);
+        logQ.info(connection.getNameDB() + str);
         statement.executeUpdate(String.valueOf(str));
     }
     public List selectAll(Class myClass) throws SQLException,
             NoSuchMethodException, IllegalAccessException, InvocationTargetException,
             InstantiationException, NoSuchFieldException {
-        logQ.info(connection.getNameDB() + " SELECT * FROM " +
+        logQ.info(connection.getNameDB() + " Select all from " +
                 myClass.getDeclaredMethod("getTableName").invoke(null));
         ResultSet res = statement.executeQuery("SELECT * " + "FROM " +
                 myClass.getDeclaredMethod("getTableName").invoke(null));
@@ -83,27 +90,18 @@ public class Queries {
         }
         return list;
     }
-    public List selectByField(Class myClass, Field field, String value) throws NoSuchMethodException,
-            SQLException, IllegalAccessException, InvocationTargetException, InstantiationException {
-        ResultSet res;
-        if(field.getType().equals(String.class)) {
-            logQ.info(connection.getNameDB() + " SELECT * " + "FROM " +
-                    myClass.getDeclaredMethod("getTableName").invoke(null) +
-                    " WHERE " + field.getName() +
-                    " = '" + value + "'");
-            res = statement.executeQuery("SELECT * " + "FROM " +
-                    myClass.getDeclaredMethod("getTableName").invoke(null) + " WHERE " + field.getName() +
-                    " = '" + value + "'");
-        }
-        else {
-            logQ.info(connection.getNameDB() + " SELECT * " + "FROM " +
-                    myClass.getDeclaredMethod("getTableName").invoke(null) +
-                    " WHERE " + field.getName() +
-                    " = " + value);
-            res = statement.executeQuery("SELECT * " + "FROM " +
-                    myClass.getDeclaredMethod("getTableName").invoke(null) + " WHERE " + field.getName() +
-                    " = " + value);
-        }
+    public List selectByRegistrationDate(Class myClass, Date date) throws SQLException,
+            NoSuchMethodException, IllegalAccessException, InvocationTargetException,
+            InstantiationException, NoSuchFieldException {
+        logQ.info(connection.getNameDB() + " Select all from " +
+                myClass.getDeclaredMethod("getTableName").invoke(null) + " where registrationDate = '"
+                + date.toString() + "'");
+        System.out.println("SELECT * " + "FROM " +
+                myClass.getDeclaredMethod("getTableName").invoke(null) + " where registrationDate = '"
+                + date.toString() + "'");
+        ResultSet res = statement.executeQuery("SELECT * " + "FROM " +
+                myClass.getDeclaredMethod("getTableName").invoke(null) + " where registrationDate = '"
+                + date.toString() + "'");
         List list = new LinkedList();
         Field[] fields = myClass.getDeclaredFields();
         Constructor constructor = myClass.getDeclaredConstructors()[0];
@@ -116,45 +114,7 @@ public class Queries {
         }
         return list;
     }
-    public List selectLessThan(Class myClass, Field field, String value) throws NoSuchMethodException,
-            InvocationTargetException, IllegalAccessException, SQLException, InstantiationException {
-        ResultSet res;
-        if(field.getType().equals(String.class)) {
-            logQ.info(connection.getNameDB() + " SELECT * " + "FROM " +
-                    myClass.getDeclaredMethod("getTableName").invoke(null) +
-                    " WHERE " + field.getName() +
-                    " <= '" + value + "'");
-            res = statement.executeQuery("SELECT * " + "FROM " +
-                    myClass.getDeclaredMethod("getTableName").invoke(null) + " WHERE " + field.getName() +
-                    " <= '" + value + "'");
-        }
-        else {
-                logQ.info(connection.getNameDB() + " SELECT * " + "FROM " +
-                        myClass.getDeclaredMethod("getTableName").invoke(null) +
-                        " WHERE " + field.getName() +
-                        " <= " + value);
-                res = statement.executeQuery("SELECT * " + "FROM " +
-                        myClass.getDeclaredMethod("getTableName").invoke(null) + " WHERE " + field.getName() +
-                        " <= " + value);
-        }
-        List list = new LinkedList();
-        Field[] fields = myClass.getDeclaredFields();
-        Constructor constructor = myClass.getDeclaredConstructors()[0];
-        Object[] objects = new Object[fields.length];
-        while(res.next()) {
-            for (int i = 0; i < objects.length; i++) {
-                if(fields[i].getType().equals(Date.class)) {
-                    objects[i] = res.getObject(fields[i].getName());
-                }
-                else {
-                    objects[i] = res.getObject(fields[i].getName());
-                }
-            }
-            list.add(constructor.newInstance(objects));
-        }
-        return list;
-    }
-    private StringBuffer stringMaker(StringBuffer str, IQueryTable table) throws IllegalAccessException {
+    private StringBuffer stringMaker(StringBuffer str, Object table) throws IllegalAccessException {
         for(Field x : table.getClass().getDeclaredFields()) {
             x.setAccessible(true);
             if(x.getType() != String.class) {
@@ -168,4 +128,7 @@ public class Queries {
         str.delete(str.length()-2,str.length());
         return str;
     }
+
+     */
 }
+

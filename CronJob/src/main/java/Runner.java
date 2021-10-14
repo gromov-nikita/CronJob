@@ -1,3 +1,13 @@
+import service.db.connection.DBConnection;
+import service.db.query.Queries;
+import service.handler.Cron.CronJob;
+
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.Properties;
+
 /*
 Create table with users table. Table should include information about user: name, birthday, last login, age...,
 registration date
@@ -7,4 +17,29 @@ names of users that logged in in system last  5 hours, count of users more than 
 users that registered today
  */
 public class Runner {
+    public static void main(String[] args) {
+        Properties properties = new Properties();
+        FileReader reader = null;
+        try {
+            reader = new FileReader("src/main/resources/dbInfo.properties");
+            properties.load(reader);
+            CronJob cronJob = new CronJob(new Queries(DBConnection.getInstance(properties.getProperty("login"),
+                    properties.getProperty("password"),
+                    properties.getProperty("url"))));
+            cronJob.writeStatistics();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            if(reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

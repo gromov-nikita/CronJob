@@ -1,17 +1,19 @@
 package models.users;
 
 import java.sql.Date;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
-public class User implements IQueryTable {
+public class User {
     private String firstName;
     private String lastName;
     private int age;
     private Date birthdayDate;
-    private Date lastLoginDate;
+    private Timestamp lastLoginDate;
     private Date registrationDate;
 
     public User(String firstName, String lastName, int age, Date birthdayDate,
-                Date lastLoginDate, Date registrationDate) {
+                Timestamp lastLoginDate, Date registrationDate) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.age = age;
@@ -32,10 +34,13 @@ public class User implements IQueryTable {
     public Date getBirthdayDate() {
         return birthdayDate;
     }
-    public Date getLastLoginDate() {
+    public Timestamp getLastLoginDate() {
         return lastLoginDate;
     }
     public Date getRegistrationDate() {
         return registrationDate;
+    }
+    public static String getTableName() {
+        return "user";
     }
 }
