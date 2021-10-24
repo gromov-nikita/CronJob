@@ -1,12 +1,13 @@
 import service.db.connection.DBConnection;
 import service.db.query.Queries;
 import service.handler.Cron.CronJob;
-
+import helpers.*;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Properties;
+import java.util.Scanner;
 
 /*
 Create table with users table. Table should include information about user: name, birthday, last login, age...,
@@ -18,11 +19,9 @@ users that registered today
  */
 public class Runner {
     public static void main(String[] args) {
-        Properties properties = new Properties();
         FileReader reader = null;
         try {
-            reader = new FileReader("src/main/resources/dbInfo.properties");
-            properties.load(reader);
+            Properties properties = PropertiesHelper.useProperty("src/main/resources/dbInfo.properties");
             CronJob cronJob = new CronJob(new Queries(DBConnection.getInstance(properties.getProperty("login"),
                     properties.getProperty("password"),
                     properties.getProperty("url"))));
@@ -39,6 +38,8 @@ public class Runner {
                 }
             }
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
