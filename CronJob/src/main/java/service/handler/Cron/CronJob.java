@@ -2,7 +2,6 @@ package service.handler.Cron;
 
 import helpers.PropertiesHelper;
 import models.users.User;
-import service.db.query.Queries;
 
 import java.io.FileWriter;
 import java.io.File;
@@ -13,7 +12,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-
+import db.*;
 public class CronJob {
     private Queries queries;
     private int min = 1;

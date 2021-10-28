@@ -1,5 +1,4 @@
-import service.db.connection.DBConnection;
-import service.db.query.Queries;
+import db.*;
 import service.handler.Cron.CronJob;
 import helpers.*;
 import java.io.FileNotFoundException;
